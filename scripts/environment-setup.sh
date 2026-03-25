@@ -194,6 +194,7 @@ detect_environment() {
     # Detect Linux distribution
     if [ "$DETECTED_OS" == "Linux" ]; then
         if [ -f /etc/os-release ]; then
+            # shellcheck disable=SC1091
             # shellcheck source=/etc/os-release
             . /etc/os-release
             DETECTED_DISTRO="$ID"
