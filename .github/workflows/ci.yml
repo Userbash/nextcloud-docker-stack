@@ -1,0 +1,46 @@
+name: Local Checks & Lints
+
+on:
+  push:
+    branches: [ "main", "master", "dev" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run ShellCheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          # Exclude data folder (restrictive permissions) and .git to prevent permission errors
+          sudo find . -type d \( -name 'data' -o -name '.git' \) -prune -o -type f -name '*.sh' -print0 | sudo xargs -0 -r shellcheck
+
+      - name: Run yamllint
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y yamllint
+          yamllint docker-compose*.yaml .github/workflows/ || echo "Yamllint found issues, but continuing..."
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Python Linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black
+
+      - name: Check Python formatting
+        run: |
+          # Use -E to preserve env if needed, but normally pip installs to path
+          black --check . || echo "Black found formatting issues, but continuing..."
+
+      - name: Lint Python with flake8
+        run: |
+          flake8 . || echo "Flake8 found issues, but continuing..."

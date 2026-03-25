@@ -1,0 +1,39 @@
+# Nextcloud Ansible Inventory for Production Environment
+[production]
+prod-app1 ansible_host=prod-app1.example.com
+prod-app2 ansible_host=prod-app2.example.com
+prod-app3 ansible_host=prod-app3.example.com
+
+[production:vars]
+environment=production
+container_runtime=podman
+enable_rootless=true
+configure_firewall=true
+setup_ssl=true
+
+# Production environment variables
+env_vars:
+  NEXTCLOUD_ADMIN_USER: "{{ vault_nextcloud_admin_user }}"
+  NEXTCLOUD_ADMIN_PASSWORD: "{{ vault_nextcloud_admin_password }}"
+  POSTGRES_USER: "{{ vault_postgres_user }}"
+  POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
+  POSTGRES_DB: nextcloud
+  POSTGRES_HOST: prod-db.example.com
+  REDIS_HOST: prod-redis.example.com
+  REDIS_PASSWORD: "{{ vault_redis_password }}"
+  NEXTCLOUD_TRUSTED_DOMAINS: "nextcloud.example.com,www.nextcloud.example.com"
+  NEXTCLOUD_OVERWRITE_PROTOCOL: https
+  LETSENCRYPT_EMAIL: admin@example.com
+
+# DB Host
+db_host: prod-db.example.com
+db_user: "{{ vault_db_user }}"
+db_password: "{{ vault_db_password }}"
+
+# Backup settings
+backup_enabled: true
+backup_schedule: "0 2 * * *"  # 2 AM daily
+
+# Monitoring
+monitoring_enabled: true
+prometheus_exporter: true

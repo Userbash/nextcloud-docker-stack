@@ -1,0 +1,254 @@
+---
+# Nextcloud Docker Stack - Ansible Deployment Playbook
+# Deploy Nextcloud with Docker/Podman across multiple servers
+
+- name: Deploy Nextcloud Docker Stack
+  hosts: all
+  become: yes
+  vars:
+    project_root: /opt/nextcloud-docker-stack
+    app_user: nextcloud-app
+    rootless_user: nextcloud-rootless
+    docker_compose_version: "2.0"
+    environment: "{{ env_stage | default('production') }}"
+  
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg: |
+          Deploying Nextcloud Docker Stack
+          Environment: {{ environment }}
+          Target hosts: {{ inventory_hostname }}
+          Project root: {{ project_root }}
+
+    # ========================================================================
+    # SYSTEM PREPARATION
+    # ========================================================================
+    
+    - name: Update system packages
+      package:
+        name: '*'
+        state: latest
+      when: ansible_os_family == "Debian" or ansible_os_family == "RedHat"
+
+    - name: Install required dependencies
+      package:
+        name:
+          - git
+          - curl
+          - wget
+          - jq
+          - python3-pip
+          - python3-docker
+          - python3-compose
+        state: present
+
+    - name: Install Docker
+      include_tasks: tasks/install-docker.yml
+      when: container_runtime == "docker" or container_runtime is not defined
+
+    - name: Install Podman
+      include_tasks: tasks/install-podman.yml
+      when: container_runtime == "podman"
+
+    # ========================================================================
+    # DIRECTORY STRUCTURE
+    # ========================================================================
+    
+    - name: Create project directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ project_root }}"
+        - "{{ project_root }}/config"
+        - "{{ project_root }}/data"
+        - "{{ project_root }}/logs"
+        - "{{ project_root }}/.secrets"
+
+    # ========================================================================
+    # CLONE REPOSITORY
+    # ========================================================================
+    
+    - name: Clone Nextcloud Docker Stack repository
+      git:
+        repo: "{{ repository_url | default('https://github.com/your-repo/nextcloud-docker-stack.git') }}"
+        dest: "{{ project_root }}"
+        version: "{{ branch | default('main') }}"
+        update: yes
+        force: yes
+
+    # ========================================================================
+    # USER SETUP
+    # ========================================================================
+    
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        uid: 5000
+        group: "{{ app_user }}"
+        shell: /sbin/nologin
+        home: /var/lib/{{ app_user }}
+        createhome: yes
+        state: present
+
+    - name: Create rootless user (if enabled)
+      user:
+        name: "{{ rootless_user }}"
+        uid: 5001
+        shell: /bin/bash
+        createhome: yes
+        state: present
+      when: enable_rootless | default(true)
+
+    # ========================================================================
+    # ENVIRONMENT CONFIGURATION
+    # ========================================================================
+    
+    - name: Copy environment template
+      copy:
+        src: "{{ project_root }}/.env.example"
+        dest: "{{ project_root }}/.env.secure"
+        mode: '0600'
+        backup: yes
+      ignore_errors: yes
+
+    - name: Update environment variables
+      lineinfile:
+        path: "{{ project_root }}/.env.secure"
+        regexp: "^{{ item.key }}="
+        line: "{{ item.key }}={{ item.value }}"
+      loop: "{{ env_vars | dict2items }}"
+      no_log: True
+
+    - name: Fix .env.secure permissions
+      file:
+        path: "{{ project_root }}/.env.secure"
+        mode: '0600'
+        owner: root
+
+    # ========================================================================
+    # DOCKER COMPOSE CONFIGURATION
+    # ========================================================================
+    
+    - name: Select compose file based on container runtime
+      set_fact:
+        compose_file: "{{ 'docker-compose.rootless.yaml' if enable_rootless | default(true) else 'docker-compose.yaml' }}"
+
+    - name: Copy docker-compose file
+      copy:
+        src: "{{ project_root }}/{{ compose_file }}"
+        dest: "{{ project_root }}/docker-compose.yml"
+        remote_src: yes
+
+    # ========================================================================
+    # CONTAINER DEPLOYMENT
+    # ========================================================================
+    
+    - name: Pull container images
+      command: "docker-compose -f {{ project_root }}/docker-compose.yml pull"
+      environment:
+        DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
+
+    - name: Start containers
+      command: "docker-compose -f {{ project_root }}/docker-compose.yml up -d"
+      environment:
+        DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
+
+    - name: Wait for containers to start
+      pause:
+        seconds: 5
+
+    - name: Check container status
+      command: docker-compose -f {{ project_root }}/docker-compose.yml ps
+      register: compose_status
+
+    - name: Display container status
+      debug:
+        msg: "{{ compose_status.stdout_lines }}"
+
+    # ========================================================================
+    # SYSTEMD SERVICE
+    # ========================================================================
+    
+    - name: Create systemd service file
+      template:
+        src: templates/nextcloud.service.j2
+        dest: /etc/systemd/system/nextcloud-stack.service
+        mode: '0644'
+      notify: Reload systemd daemon
+
+    - name: Enable systemd service
+      systemd:
+        name: nextcloud-stack
+        enabled: yes
+        state: started
+
+    # ========================================================================
+    # SSL/TLS CONFIGURATION
+    # ========================================================================
+    
+    - name: Configure SSL certificates
+      include_tasks: tasks/setup-ssl.yml
+      when: setup_ssl | default(true)
+
+    # ========================================================================
+    # FIREWALL RULES
+    # ========================================================================
+    
+    - name: Configure UFW firewall
+      ufw:
+        rule: "{{ item.rule }}"
+        port: "{{ item.port }}"
+        proto: tcp
+      loop:
+        - { rule: 'allow', port: '22' }
+        - { rule: 'allow', port: '80' }
+        - { rule: 'allow', port: '443' }
+      when: configure_firewall | default(true)
+
+    # ========================================================================
+    # HEALTH CHECK
+    # ========================================================================
+    
+    - name: Run health check script
+      command: bash {{ project_root }}/scripts/health-check.sh
+      register: health_check_result
+
+    - name: Display health check results
+      debug:
+        msg: "{{ health_check_result.stdout_lines }}"
+
+    # ========================================================================
+    # SECURITY AUDIT
+    # ========================================================================
+    
+    - name: Run security audit
+      command: bash {{ project_root }}/scripts/security-audit.sh
+      register: security_audit_result
+
+    - name: Display security audit summary
+      debug:
+        msg: "Security audit completed. See logs for details."
+
+  handlers:
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+  post_tasks:
+    - name: Deployment summary
+      debug:
+        msg: |
+          ✅ Nextcloud Docker Stack deployed successfully!
+          
+          Access Nextcloud at:
+          - http://{{ inventory_hostname }}:80
+          - https://{{ inventory_hostname }}:443
+          
+          Logs available at:
+          - {{ project_root }}/logs/
+          
+          To monitor containers:
+          - docker-compose -f {{ project_root }}/docker-compose.yml logs -f

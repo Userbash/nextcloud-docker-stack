@@ -1,0 +1,153 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: docker.io/library/postgres:16-alpine
+    container_name: nextcloud-db-rootless
+    restart: always
+    
+    volumes:
+      - db_data:/var/lib/postgresql/data:Z  # :Z for rootless SELinux context
+    
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    networks:
+      - nextcloud_network
+    
+    security_opt:
+      - no-new-privileges:true
+
+  # Redis Cache
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: nextcloud-redis-rootless
+    restart: always
+    
+    command: redis-server --appendonly yes
+    
+    volumes:
+      - redis_data:/data:Z  # :Z for rootless
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    networks:
+      - nextcloud_network
+    
+    security_opt:
+      - no-new-privileges:true
+
+  # Nextcloud Application
+  app:
+    image: docker.io/library/nextcloud:27-fpm-alpine
+    container_name: nextcloud-app-rootless
+    restart: always
+    
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    volumes:
+      - nextcloud_html:/var/www/html:Z
+      - nextcloud_config:/var/www/html/config:Z
+      - nextcloud_data:/var/www/html/data:Z
+      - nextcloud_apps:/var/www/html/custom_apps:Z
+      - /etc/localtime:/etc/localtime:ro,Z
+
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
+      OVERWRITEPROTOCOL: ${OVERWRITEPROTOCOL}
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT}
+      PHP_UPLOAD_MAX_FILESIZE: ${PHP_UPLOAD_MAX_FILESIZE}
+      PHP_POST_MAX_SIZE: ${PHP_POST_MAX_SIZE}
+      PHP_MAX_EXECUTION_TIME: ${PHP_MAX_EXECUTION_TIME}
+      PHP_OPCACHE_ENABLE: ${PHP_OPCACHE_ENABLE}
+      PHP_OPCACHE_MEMORY_CONSUMPTION: ${PHP_OPCACHE_MEMORY_CONSUMPTION}
+      PHP_APCU_ENABLED: ${PHP_APCU_ENABLED}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+
+    networks:
+      - nextcloud_network
+    
+    security_opt:
+      - no-new-privileges:true
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: docker.io/library/nginx:1.25-alpine
+    container_name: nextcloud-nginx-rootless
+    restart: always
+    
+    # IMPORTANT for rootless: use ephemeral ports >= 1024
+    ports:
+      - "${NEXTCLOUD_HTTP_PORT}:80"        # Default: 8081:80
+      - "${NEXTCLOUD_HTTPS_PORT}:443"      # Default: 8443:443
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro,Z
+      - nextcloud_html:/var/www/html:ro,Z
+      - ./config/ssl:/etc/nginx/ssl:ro,Z
+      - /etc/localtime:/etc/localtime:ro,Z
+
+    depends_on:
+      - app
+
+    networks:
+      - nextcloud_network
+    
+    security_opt:
+      - no-new-privileges:true
+
+  # Certbot for SSL
+  certbot:
+    image: docker.io/certbot/certbot:latest
+    container_name: nextcloud-certbot-rootless
+    restart: on-failure
+
+    volumes:
+      - ./config/ssl:/etc/letsencrypt:Z
+      - ./config/webroot:/var/www/certbot:Z
+
+    environment:
+      CERTBOT_EMAIL: ${LETSENCRYPT_EMAIL}
+      CERTBOT_DOMAIN: ${NEXTCLOUD_DOMAIN}
+
+networks:
+  nextcloud_network:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+  nextcloud_html:
+    driver: local
+  nextcloud_config:
+    driver: local
+  nextcloud_data:
+    driver: local
+  nextcloud_apps:
+    driver: local

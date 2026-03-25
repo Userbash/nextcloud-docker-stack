@@ -1,0 +1,151 @@
+
+=== Environment Requirements ===
+[TEST 1] Python 3 available
+  Version: 3.13.12
+  Result: PASS
+[TEST 2] Bash available
+  Version: 5.3.9(1)
+  Result: PASS
+[TEST 3] Nginx available
+  Result: FAIL - Nginx not found
+[TEST 4] PHP-FPM available
+  Result: FAIL - PHP-FPM not found
+[TEST 5] Redis CLI available
+  Result: FAIL - Redis CLI not found
+[TEST 6] PostgreSQL CLI available
+  Result: FAIL - PostgreSQL CLI not found
+[TEST 7] Git available
+  Version: 2.53.0
+  Result: PASS
+
+=== Directory Structure ===
+[TEST 8] Directory: data/nextcloud
+  Result: FAIL - Directory not found (run setup-local-dev.sh)
+[TEST 9] Directory: data/postgresql
+  Result: FAIL - Directory not found (run setup-local-dev.sh)
+[TEST 10] Directory: data/redis
+  Result: FAIL - Directory not found (run setup-local-dev.sh)
+[TEST 11] Directory: data/tmp
+  Result: FAIL - Directory not found (run setup-local-dev.sh)
+[TEST 12] Directory: logs
+  Result: FAIL - Directory not found (run setup-local-dev.sh)
+[TEST 13] Directory: config/local
+  Path: /var/home/sanya/nextcloud-docker-stack/config/local
+  Result: PASS
+[TEST 14] Directory: tests
+  Path: /var/home/sanya/nextcloud-docker-stack/tests
+  Result: PASS
+[TEST 15] Directory: scripts
+  Path: /var/home/sanya/nextcloud-docker-stack/scripts
+  Result: PASS
+
+=== Configuration Files ===
+[TEST 16] File: .env.local
+  Result: FAIL - Not found
+[TEST 17] File: nginx.conf (local)
+  Result: PASS
+[TEST 18] File: php-fpm.conf (local)
+  Result: PASS
+[TEST 19] File: redis.conf (local)
+  Result: PASS
+[TEST 20] File: docker-compose.yaml (reference)
+  Result: PASS
+
+=== Configuration Validation ===
+[TEST 21] Validate: nginx.conf syntax
+  Result: SKIP
+[TEST 22] Validate: php.ini syntax
+  Result: SKIP
+[TEST 23] Validate: .env.local format
+  Result: PASS
+[TEST 24] Validate: docker-compose.yaml YAML format
+  Result: PASS
+
+=== Service Connectivity ===
+[TEST 25] Connect: Redis on port 6379
+  Result: SKIP
+[TEST 26] Connect: PostgreSQL on port 5432
+  Result: SKIP
+[TEST 27] Process: Nginx running
+  Result: FAIL - Nginx not running
+[TEST 28] Process: PHP-FPM running
+  Result: FAIL - PHP-FPM not running
+
+=== Database Tests ===
+[TEST 29] Database: SQLite DB exists
+  Result: FAIL - SQLite DB not found
+[TEST 30] Database: Tables exist
+  Result: FAIL - No tables found
+[TEST 31] Database: User data directories exist
+  Result: FAIL - Some user directories missing
+
+=== Script Tests ===
+[TEST 32] Script: scripts/setup-local-dev.sh executable
+  Result: PASS
+[TEST 33] Script: scripts/local-services-mock.sh executable
+  Result: PASS
+[TEST 34] Script: scripts/backup.sh executable
+  Result: PASS
+[TEST 35] Script: scripts/health-check.sh executable
+  Result: PASS
+[TEST 36] Script: scripts/init.sh executable
+  Result: PASS
+[TEST 37] Script: scripts/update.sh executable
+  Result: PASS
+[TEST 38] Syntax: backup.sh
+  Result: PASS
+[TEST 39] Syntax: check-flatpak-requirements.sh
+  Result: PASS
+[TEST 40] Syntax: environment-setup.sh
+  Result: PASS
+[TEST 41] Syntax: health-check.sh
+  Result: PASS
+[TEST 42] Syntax: init-podman.sh
+  Result: PASS
+[TEST 43] Syntax: init-rootless.sh
+  Result: PASS
+[TEST 44] Syntax: init.sh
+  Result: PASS
+[TEST 45] Syntax: local-services-mock.sh
+  Result: PASS
+[TEST 46] Syntax: manage-rootless.sh
+  Result: PASS
+[TEST 47] Syntax: rootless-setup.sh
+  Result: PASS
+[TEST 48] Syntax: run-linters.sh
+  Result: PASS
+[TEST 49] Syntax: security-audit.sh
+  Result: PASS
+[TEST 50] Syntax: setup-local-dev.sh
+  Result: PASS
+[TEST 51] Syntax: setup-portainer.sh
+  Result: PASS
+[TEST 52] Syntax: setup-rootless-user.sh
+  Result: PASS
+[TEST 53] Syntax: setup-systemd-services.sh
+  Result: PASS
+[TEST 54] Syntax: update.sh
+  Result: PASS
+
+=== Port Availability ===
+[TEST 55] Port: 6379 (Redis)
+  Result: PASS
+[TEST 56] Port: 5432 (PostgreSQL)
+  Result: PASS
+[TEST 57] Port: 8080 (Nginx)
+  Result: PASS
+[TEST 58] Port: 8000 (PHP Dev Server)
+  Result: PASS
+
+=== File Permissions ===
+[TEST 59] Permissions: .env.local (should be 600)
+  Result: FAIL - Permissions are  (should be 600)
+[TEST 60] Permissions: data directories writable
+  Result: FAIL - Cannot write to data/logs directories
+
+=== SUMMARY ===
+Total Tests: 60
+Passed: 39
+Failed: 17
+Success Rate: 65%
+Test Date: Ср 25 мар 2026 11:38:06 +05
