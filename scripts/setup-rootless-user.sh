@@ -80,8 +80,8 @@ mkdir -p "$PROJECT_DIR/logs"
 mkdir -p "$PROJECT_DIR/backups"
 
 # Set ownership
-chown -R "$USERNAME:$USERNAME" /home/$USERNAME
-chmod 700 /home/$USERNAME
+chown -R "$USERNAME:$USERNAME" /home/"$USERNAME"
+chmod 700 /home/"$USERNAME"
 
 echo -e "  ${GREEN}✅ Directories created${NC}"
 

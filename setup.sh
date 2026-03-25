@@ -110,7 +110,10 @@ RUNTIME=""
 COMPOSE_CMD=""
 
 if $ROOTLESS; then
-    check_command podman   && RUNTIME="podman"   || die "podman not found. Install it or omit --rootless."
+    if ! check_command podman; then
+        die "podman not found. Install it or omit --rootless."
+    fi
+    RUNTIME="podman"
     check_command podman-compose && COMPOSE_CMD="podman-compose" \
         || { check_command podman && COMPOSE_CMD="podman compose" ; } \
         || die "podman-compose not found. Install it: pip install podman-compose"
@@ -325,7 +328,6 @@ SLEEP=5
 
 while [ $WAITED -lt $MAX_WAIT ]; do
     # Count running containers
-    RUNNING=$($COMPOSE_CMD -f "$COMPOSE_FILE" ps --services 2>/dev/null | wc -l)
     UP=$($COMPOSE_CMD -f "$COMPOSE_FILE" ps 2>/dev/null | grep -c " Up\| running" || true)
     if [ "$UP" -ge 3 ]; then
         break

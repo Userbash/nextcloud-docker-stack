@@ -13,7 +13,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Paths
@@ -32,6 +31,7 @@ mkdir -p "$PROJECT_ROOT/test-reports"
 # Test Framework Functions
 ###############################################################################
 
+# Starts a single test case and writes its header to the report.
 test_start() {
     local test_name="$1"
     TESTS_RUN=$((TESTS_RUN + 1))
@@ -39,12 +39,14 @@ test_start() {
     echo "[TEST $TESTS_RUN] $test_name" >> "$TEST_REPORT"
 }
 
+# Marks the current test as passed.
 test_pass() {
     TESTS_PASSED=$((TESTS_PASSED + 1))
     echo -e "${GREEN}✓${NC}"
     echo "  Result: PASS" >> "$TEST_REPORT"
 }
 
+# Marks the current test as failed with a reason.
 test_fail() {
     local reason="$1"
     TESTS_FAILED=$((TESTS_FAILED + 1))
@@ -52,6 +54,7 @@ test_fail() {
     echo "  Result: FAIL - $reason" >> "$TEST_REPORT"
 }
 
+# Marks the current test as skipped.
 test_skip() {
     echo -e "${YELLOW}⊗${NC} (skipped)"
     echo "  Result: SKIP" >> "$TEST_REPORT"
@@ -60,6 +63,8 @@ test_skip() {
 ###############################################################################
 # Test: Environment Requirements
 ###############################################################################
+
+# Checks required binaries and records their versions.
 test_environment_requirements() {
     echo -e "${BLUE}Environment Requirements${NC}"
     echo "" >> "$TEST_REPORT"
@@ -69,7 +74,8 @@ test_environment_requirements() {
     # Python 3
     test_start "Python 3 available"
     if command -v python3 &>/dev/null; then
-        local py_version=$(python3 --version 2>&1 | awk '{print $2}')
+        local py_version
+        py_version=$(python3 --version 2>&1 | awk '{print $2}')
         echo "  Version: $py_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -79,7 +85,8 @@ test_environment_requirements() {
     # Bash
     test_start "Bash available"
     if command -v bash &>/dev/null; then
-        local bash_version=$(bash --version | head -1 | awk '{print $4}' | cut -d- -f1)
+        local bash_version
+        bash_version=$(bash --version | head -1 | awk '{print $4}' | cut -d- -f1)
         echo "  Version: $bash_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -89,7 +96,8 @@ test_environment_requirements() {
     # Nginx
     test_start "Nginx available"
     if command -v nginx &>/dev/null; then
-        local nginx_version=$(nginx -v 2>&1 | awk '{print $3}')
+        local nginx_version
+        nginx_version=$(nginx -v 2>&1 | awk '{print $3}')
         echo "  Version: $nginx_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -99,7 +107,8 @@ test_environment_requirements() {
     # PHP-FPM
     test_start "PHP-FPM available"
     if command -v php-fpm &>/dev/null; then
-        local php_version=$(php-fpm -v | head -1 | awk '{print $2}')
+        local php_version
+        php_version=$(php-fpm -v | head -1 | awk '{print $2}')
         echo "  Version: $php_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -109,7 +118,8 @@ test_environment_requirements() {
     # Redis CLI
     test_start "Redis CLI available"
     if command -v redis-cli &>/dev/null; then
-        local redis_version=$(redis-cli --version | awk '{print $NF}')
+        local redis_version
+        redis_version=$(redis-cli --version | awk '{print $NF}')
         echo "  Version: $redis_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -119,7 +129,8 @@ test_environment_requirements() {
     # PostgreSQL CLI
     test_start "PostgreSQL CLI available"
     if command -v psql &>/dev/null; then
-        local psql_version=$(psql --version | awk '{print $NF}')
+        local psql_version
+        psql_version=$(psql --version | awk '{print $NF}')
         echo "  Version: $psql_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -129,7 +140,8 @@ test_environment_requirements() {
     # Git
     test_start "Git available"
     if command -v git &>/dev/null; then
-        local git_version=$(git --version | awk '{print $3}')
+        local git_version
+        git_version=$(git --version | awk '{print $3}')
         echo "  Version: $git_version" >> "$TEST_REPORT"
         test_pass
     else
@@ -142,6 +154,8 @@ test_environment_requirements() {
 ###############################################################################
 # Test: Directory Structure
 ###############################################################################
+
+# Verifies required project directories exist.
 test_directory_structure() {
     echo -e "${BLUE}Directory Structure${NC}"
     echo "" >> "$TEST_REPORT"
@@ -175,6 +189,8 @@ test_directory_structure() {
 ###############################################################################
 # Test: Configuration Files
 ###############################################################################
+
+# Verifies required configuration files exist.
 test_configuration_files() {
     echo -e "${BLUE}Configuration Files${NC}"
     echo "" >> "$TEST_REPORT"
@@ -184,7 +200,8 @@ test_configuration_files() {
     # .env.local
     test_start "File: .env.local"
     if [ -f "$PROJECT_ROOT/.env.local" ]; then
-        local size=$(wc -c < "$PROJECT_ROOT/.env.local")
+        local size
+        size=$(wc -c < "$PROJECT_ROOT/.env.local")
         echo "  Size: $size bytes" >> "$TEST_REPORT"
         test_pass
     else
@@ -229,6 +246,8 @@ test_configuration_files() {
 ###############################################################################
 # Test: Configuration Validation
 ###############################################################################
+
+# Validates syntax and format of critical config files.
 test_config_validation() {
     echo -e "${BLUE}Configuration Validation${NC}"
     echo "" >> "$TEST_REPORT"
@@ -261,7 +280,8 @@ test_config_validation() {
     
     # Validate .env.local format
     test_start "Validate: .env.local format"
-    local invalid_lines=$(grep -v "^[A-Z_].*=.*$" "$PROJECT_ROOT/.env.local" 2>/dev/null | grep -v "^#" | grep -v "^$" | wc -l)
+    local invalid_lines
+    invalid_lines=$(awk '!/^[A-Z_].*=.*$/ && !/^#/ && NF { count++ } END { print count+0 }' "$PROJECT_ROOT/.env.local" 2>/dev/null)
     if [ "$invalid_lines" -eq 0 ]; then
         test_pass
     else
@@ -286,6 +306,8 @@ test_config_validation() {
 ###############################################################################
 # Test: Service Connectivity
 ###############################################################################
+
+# Checks local services and process availability.
 test_service_connectivity() {
     echo -e "${BLUE}Service Connectivity${NC}"
     echo "" >> "$TEST_REPORT"
@@ -318,7 +340,7 @@ test_service_connectivity() {
     
     # Nginx status
     test_start "Process: Nginx running"
-    if ps aux | grep -q "[n]ginx"; then
+    if pgrep -x nginx >/dev/null 2>&1; then
         test_pass
     else
         test_fail "Nginx not running"
@@ -326,7 +348,7 @@ test_service_connectivity() {
     
     # PHP-FPM status
     test_start "Process: PHP-FPM running"
-    if ps aux | grep -q "[p]hp-fpm"; then
+    if pgrep -x php-fpm >/dev/null 2>&1; then
         test_pass
     else
         test_fail "PHP-FPM not running"
@@ -338,6 +360,8 @@ test_service_connectivity() {
 ###############################################################################
 # Test: Database
 ###############################################################################
+
+# Verifies SQLite database presence, tables, and user data directories.
 test_database() {
     echo -e "${BLUE}Database Tests${NC}"
     echo "" >> "$TEST_REPORT"
@@ -347,7 +371,8 @@ test_database() {
     # SQLite DB exists
     test_start "Database: SQLite DB exists"
     if [ -f "$PROJECT_ROOT/data/nextcloud/nextcloud.db" ]; then
-        local db_size=$(ls -lh "$PROJECT_ROOT/data/nextcloud/nextcloud.db" | awk '{print $5}')
+        local db_size
+        db_size=$(stat -c '%s bytes' "$PROJECT_ROOT/data/nextcloud/nextcloud.db" 2>/dev/null || stat -f '%z bytes' "$PROJECT_ROOT/data/nextcloud/nextcloud.db")
         echo "  Size: $db_size" >> "$TEST_REPORT"
         test_pass
     else
@@ -357,7 +382,8 @@ test_database() {
     # SQLite tables
     test_start "Database: Tables exist"
     if command -v sqlite3 &>/dev/null; then
-        local table_count=$(sqlite3 "$PROJECT_ROOT/data/nextcloud/nextcloud.db" ".tables" | wc -w)
+        local table_count
+        table_count=$(sqlite3 "$PROJECT_ROOT/data/nextcloud/nextcloud.db" ".tables" | wc -w)
         if [ "$table_count" -gt 0 ]; then
             echo "  Tables count: $table_count" >> "$TEST_REPORT"
             test_pass
@@ -394,6 +420,8 @@ test_database() {
 ###############################################################################
 # Test: Scripts
 ###############################################################################
+
+# Validates that helper scripts are executable and syntactically correct.
 test_scripts() {
     echo -e "${BLUE}Script Tests${NC}"
     echo "" >> "$TEST_REPORT"
@@ -420,7 +448,7 @@ test_scripts() {
     
     # Bash syntax check
     for script in scripts/*.sh; do
-        test_start "Syntax: $(basename $script)"
+        test_start "Syntax: $(basename "$script")"
         if bash -n "$PROJECT_ROOT/$script" 2>/dev/null; then
             test_pass
         else
@@ -434,6 +462,8 @@ test_scripts() {
 ###############################################################################
 # Test: Port Availability
 ###############################################################################
+
+# Checks whether commonly used local ports are free.
 test_ports() {
     echo -e "${BLUE}Port Availability${NC}"
     echo "" >> "$TEST_REPORT"
@@ -478,6 +508,8 @@ test_ports() {
 ###############################################################################
 # Test: Permissions
 ###############################################################################
+
+# Validates key file and directory permissions.
 test_permissions() {
     echo -e "${BLUE}File Permissions${NC}"
     echo "" >> "$TEST_REPORT"
@@ -486,7 +518,8 @@ test_permissions() {
     
     # .env.local permissions
     test_start "Permissions: .env.local (should be 600)"
-    local env_perms=$(stat -f '%OLp' "$PROJECT_ROOT/.env.local" 2>/dev/null || stat -c '%a' "$PROJECT_ROOT/.env.local")
+    local env_perms
+    env_perms=$(stat -f '%OLp' "$PROJECT_ROOT/.env.local" 2>/dev/null || stat -c '%a' "$PROJECT_ROOT/.env.local")
     if [ "$env_perms" = "600" ] || [ "$env_perms" = "660" ]; then
         test_pass
     else
@@ -507,6 +540,8 @@ test_permissions() {
 ###############################################################################
 # Test Summary
 ###############################################################################
+
+# Prints aggregated test results and appends summary to the report.
 test_summary() {
     echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║                    Test Summary                                 ║${NC}"
@@ -531,18 +566,22 @@ test_summary() {
     echo ""
     
     # Append summary to report
-    echo "" >> "$TEST_REPORT"
-    echo "=== SUMMARY ===" >> "$TEST_REPORT"
-    echo "Total Tests: $TESTS_RUN" >> "$TEST_REPORT"
-    echo "Passed: $TESTS_PASSED" >> "$TEST_REPORT"
-    echo "Failed: $TESTS_FAILED" >> "$TEST_REPORT"
-    echo "Success Rate: $pass_percent%" >> "$TEST_REPORT"
-    echo "Test Date: $(date)" >> "$TEST_REPORT"
+    {
+        echo ""
+        echo "=== SUMMARY ==="
+        echo "Total Tests: $TESTS_RUN"
+        echo "Passed: $TESTS_PASSED"
+        echo "Failed: $TESTS_FAILED"
+        echo "Success Rate: $pass_percent%"
+        echo "Test Date: $(date)"
+    } >> "$TEST_REPORT"
 }
 
 ###############################################################################
 # Main
 ###############################################################################
+
+# Entry point for full local environment validation.
 main() {
     echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║         Local Environment Tests for Flatpak Development        ║${NC}"

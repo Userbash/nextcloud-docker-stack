@@ -93,7 +93,8 @@ audit_users_and_groups() {
     log_section "AUDIT 1: USERS AND GROUPS"
     
     # Check for root user
-    local root_count=$(getent passwd | awk -F: '$3==0' | wc -l)
+    local root_count
+    root_count=$(getent passwd | awk -F: '$3==0' | wc -l)
     if [ "$root_count" -eq 1 ]; then
         log_pass "Only one user with UID 0 (root)"
     else
@@ -125,7 +126,8 @@ audit_file_permissions() {
     log_section "AUDIT 2: FILE PERMISSIONS"
     
     # Check for SUID/SGID binaries
-    local suid_count=$(find / -perm -4000 2>/dev/null | wc -l)
+    local suid_count
+    suid_count=$(find / -perm -4000 2>/dev/null | wc -l)
     if [ "$suid_count" -lt 50 ]; then
         log_pass "SUID binaries count reasonable: $suid_count"
     else
@@ -133,7 +135,8 @@ audit_file_permissions() {
     fi
     
     # Check for world-writable files
-    local world_write=$(find "$PROJECT_ROOT" -type f -perm -002 2>/dev/null | wc -l)
+    local world_write
+    world_write=$(find "$PROJECT_ROOT" -type f -perm -002 2>/dev/null | wc -l)
     if [ "$world_write" -eq 0 ]; then
         log_pass "No world-writable files in project"
     else
@@ -142,7 +145,8 @@ audit_file_permissions() {
     
     # Check .env.secure permissions
     if [ -f "$PROJECT_ROOT/.env.secure" ]; then
-        local perms=$(stat -c %a "$PROJECT_ROOT/.env.secure" 2>/dev/null || stat -f %OLp "$PROJECT_ROOT/.env.secure" 2>/dev/null)
+        local perms
+        perms=$(stat -c %a "$PROJECT_ROOT/.env.secure" 2>/dev/null || stat -f %OLp "$PROJECT_ROOT/.env.secure" 2>/dev/null)
         if [ "$perms" = "600" ]; then
             log_pass ".env.secure has correct permissions (600)"
         else
@@ -154,7 +158,8 @@ audit_file_permissions() {
     
     # Check secrets directory
     if [ -d "$PROJECT_ROOT/.secrets" ]; then
-        local secrets_perms=$(stat -c %a "$PROJECT_ROOT/.secrets" 2>/dev/null || stat -f %OLp "$PROJECT_ROOT/.secrets" 2>/dev/null)
+        local secrets_perms
+        secrets_perms=$(stat -c %a "$PROJECT_ROOT/.secrets" 2>/dev/null || stat -f %OLp "$PROJECT_ROOT/.secrets" 2>/dev/null)
         if [ "$secrets_perms" = "700" ]; then
             log_pass ".secrets directory has correct permissions (700)"
         else
@@ -167,7 +172,12 @@ audit_network_security() {
     log_section "AUDIT 3: NETWORK SECURITY"
     
     # Check listening ports
-    local listening_ports=$(netstat -tuln 2>/dev/null | grep LISTEN | wc -l || ss -tuln 2>/dev/null | grep LISTEN | wc -l)
+    local listening_ports
+    if command -v ss &>/dev/null; then
+        listening_ports=$(ss -tuln 2>/dev/null | grep -c LISTEN || true)
+    else
+        listening_ports=$(netstat -tuln 2>/dev/null | grep -c LISTEN || true)
+    fi
     log_info "Listening ports count: $listening_ports"
     
     # Check for common vulnerable ports
@@ -180,7 +190,8 @@ audit_network_security() {
     
     # Check Docker socket permissions
     if [ -S "/var/run/docker.sock" ]; then
-        local docker_perms=$(stat -c %a /var/run/docker.sock 2>/dev/null || stat -f %OLp /var/run/docker.sock 2>/dev/null)
+        local docker_perms
+        docker_perms=$(stat -c %a /var/run/docker.sock 2>/dev/null || stat -f %OLp /var/run/docker.sock 2>/dev/null)
         log_info "Docker socket permissions: $docker_perms"
     fi
 }
@@ -197,7 +208,8 @@ audit_firewall_configuration() {
     
     # Check iptables status
     if command -v iptables &>/dev/null; then
-        local rules_count=$(iptables -L | grep Chain | wc -l)
+        local rules_count
+        rules_count=$(iptables -L | grep -c Chain)
         log_info "IPtables rules count: $rules_count"
     fi
     
@@ -237,14 +249,16 @@ audit_ssl_certificates() {
     
     # Check for certificate files
     if [ -d "$PROJECT_ROOT/config/ssl" ]; then
-        local cert_count=$(find "$PROJECT_ROOT/config/ssl" -name "*.crt" -o -name "*.pem" 2>/dev/null | wc -l)
+        local cert_count
+        cert_count=$(find "$PROJECT_ROOT/config/ssl" \( -name "*.crt" -o -name "*.pem" \) 2>/dev/null | wc -l)
         if [ "$cert_count" -gt 0 ]; then
             log_info "Found $cert_count certificate files"
             
             # Check certificate expiration
             for cert in "$PROJECT_ROOT/config/ssl"/*.crt "$PROJECT_ROOT/config/ssl"/*.pem; do
                 if [ -f "$cert" ]; then
-                    local expires=$(openssl x509 -in "$cert" -noout -enddate 2>/dev/null | cut -d= -f2 || echo "unknown")
+                    local expires
+                    expires=$(openssl x509 -in "$cert" -noout -enddate 2>/dev/null | cut -d= -f2 || echo "unknown")
                     log_info "Certificate: $(basename "$cert") expires: $expires"
                 fi
             done
@@ -264,7 +278,8 @@ audit_sudo_configuration() {
     
     # Check for NOPASSWD rules
     if grep -q "NOPASSWD" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then
-        local nopass_rules=$(grep -r "NOPASSWD" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | wc -l)
+        local nopass_rules
+        nopass_rules=$(grep -r "NOPASSWD" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | wc -l)
         log_warn "Found $nopass_rules NOPASSWD rules (use with caution)"
     else
         log_pass "No NOPASSWD rules found"
@@ -276,7 +291,8 @@ audit_package_vulnerability() {
     
     # Check for security updates
     if command -v apt &>/dev/null; then
-        local updates=$(apt list --upgradable 2>/dev/null | wc -l || echo "0")
+        local updates
+        updates=$(apt list --upgradable 2>/dev/null | wc -l || echo "0")
         if [ "$updates" -gt 1 ]; then
             log_warn "Security updates available: $((updates - 1))"
         else
@@ -306,19 +322,22 @@ audit_container_security() {
     if command -v docker &>/dev/null; then
         if docker ps &>/dev/null 2>&1; then
             log_pass "Docker daemon is running"
-            local docker_version=$(docker --version)
+            local docker_version
+            docker_version=$(docker --version)
             log_info "$docker_version"
         fi
     fi
     
     # Check Podman
     if command -v podman &>/dev/null; then
-        local podman_version=$(podman --version)
+        local podman_version
+        podman_version=$(podman --version)
         log_info "Podman: $podman_version"
         
         # Check for running containers
         if podman ps &>/dev/null 2>&1; then
-            local container_count=$(podman ps -q 2>/dev/null | wc -l)
+            local container_count
+            container_count=$(podman ps -q 2>/dev/null | wc -l)
             log_info "Running containers: $container_count"
         fi
     fi

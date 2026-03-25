@@ -6,7 +6,6 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-script_dir="$(dirname "$0")"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -61,7 +60,8 @@ echo ""
 echo -e "${BLUE}Step 3: Checking XDG_RUNTIME_DIR...${NC}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
-    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    export XDG_RUNTIME_DIR
 fi
 
 echo "  Path: $XDG_RUNTIME_DIR"
@@ -83,8 +83,6 @@ echo ""
 # 4. Check Podman socket
 # ================================================================
 echo -e "${BLUE}Step 4: Checking Podman socket...${NC}"
-
-PODMAN_SOCKET="$XDG_RUNTIME_DIR/podman/podman.sock"
 
 if ! timeout 5 podman ps &>/dev/null; then
     echo -e "${YELLOW}⚠️  Podman socket not responsive, starting podman.socket...${NC}"
@@ -220,8 +218,6 @@ echo "  Podman Version: $(podman --version | cut -d' ' -f3)"
 echo "  XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR"
 echo ""
 
-# Check podman info
-PODMAN_STORAGE=$(podman info --format '{{.Store.DriverOptions}}' 2>/dev/null || echo "unknown")
 echo -e "${BLUE}📦 Podman Storage:${NC}"
 podman info --format '{{.Store.RunRoot}}' 2>/dev/null || echo "  Using default storage"
 echo ""

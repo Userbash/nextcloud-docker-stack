@@ -158,7 +158,7 @@ case "${1:-help}" in
     
     clean)
         echo -e "${YELLOW}⚠️  WARNING: This will DELETE all containers and volumes!${NC}"
-        read -p "Type 'yes' to confirm: " confirm
+        read -r -p "Type 'yes' to confirm: " confirm
         if [ "$confirm" = "yes" ]; then
             echo -e "${RED}Removing containers and volumes...${NC}"
             podman-compose -f "$COMPOSE_FILE" down -v

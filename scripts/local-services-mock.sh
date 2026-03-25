@@ -170,7 +170,7 @@ status() {
     
     # Check Redis
     if command -v redis-cli &>/dev/null; then
-        if redis-cli ping &>/dev/null | grep -q PONG; then
+        if redis-cli ping 2>/dev/null | grep -q PONG; then
             echo -e "  ${GREEN}✓${NC} Redis is ${GREEN}running${NC} (port 6379)"
             redis-cli info stats 2>/dev/null | grep -E "connected_clients|used_memory_human" | \
                 sed 's/^/    /'
@@ -181,7 +181,7 @@ status() {
     
     # Check PHP-FPM
     if command -v php-fpm &>/dev/null; then
-        if ps aux | grep -q "[p]hp-fpm"; then
+        if pgrep -x php-fpm >/dev/null 2>&1; then
             echo -e "  ${GREEN}✓${NC} PHP-FPM is ${GREEN}running${NC}"
         else
             echo -e "  ${RED}✗${NC} PHP-FPM is ${RED}not running${NC}"
@@ -190,7 +190,7 @@ status() {
     
     # Check Nginx
     if command -v nginx &>/dev/null; then
-        if ps aux | grep -q "[n]ginx"; then
+        if pgrep -x nginx >/dev/null 2>&1; then
             echo -e "  ${GREEN}✓${NC} Nginx is ${GREEN}running${NC} (port 8080)"
         else
             echo -e "  ${RED}✗${NC} Nginx is ${RED}not running${NC}"
@@ -241,8 +241,7 @@ show_logs() {
             ;;
         *)
             echo "Available logs:"
-            ls -lh "$PROJECT_ROOT/logs" 2>/dev/null | tail -n +2 | \
-                awk '{print "  " $NF " (" $5 ")"}'
+            find "$PROJECT_ROOT/logs" -maxdepth 1 -type f -printf '  %f (%s bytes)\n' 2>/dev/null
             ;;
     esac
 }

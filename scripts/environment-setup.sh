@@ -54,7 +54,6 @@ NC='\033[0m'
 # Global variables
 CURRENT_USER="$USER"
 CURRENT_UID="$UID"
-CURRENT_GID="$(id -g)"
 DETECTED_OS=""
 DETECTED_DISTRO=""
 DOCKER_AVAILABLE=false
@@ -123,11 +122,11 @@ parse_arguments() {
                 shift
                 ;;
             --docker)
-                PREFER_DOCKER=true
+                log_info "Option --docker selected"
                 shift
                 ;;
             --podman)
-                PREFER_PODMAN=true
+                log_info "Option --podman selected"
                 shift
                 ;;
             --skip-portainer)

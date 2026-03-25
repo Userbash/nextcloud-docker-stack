@@ -19,8 +19,6 @@ PORTAINER_CONTAINER="portainer"
 PORTAINER_VOLUME="portainer_data"
 PORTAINER_HTTP_PORT="8000"
 PORTAINER_HTTPS_PORT="9443"
-PODMAN_SOCKET_ROOT="/run/podman/podman.sock"
-EXPECTED_USERS=("nextcloud-app" "nextcloud-rootless")
 SKIP_CHECKS=false
 
 # ============================================================================

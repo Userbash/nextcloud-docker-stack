@@ -14,9 +14,9 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-printf "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}\n"
-printf "${BLUE}║   NEXTCLOUD DOCKER STACK - FIRST STEPS VERIFICATION      ║${NC}\n"
-printf "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}\n\n"
+printf '%b\n' "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
+printf '%b\n' "${BLUE}║   NEXTCLOUD DOCKER STACK - FIRST STEPS VERIFICATION      ║${NC}"
+printf '%b\n\n' "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 
 # Step 1: Configuration Check
 echo -e "${YELLOW}Step 1: Checking Configuration Files...${NC}"
@@ -63,7 +63,6 @@ echo -e "Using runtime: ${GREEN}${RUNTIME}${NC}"
 
 # Check if containers are running
 if $COMPOSE_CMD ps | grep -q "Up"; then
-    RUNNING=$($COMPOSE_CMD ps --services | wc -l)
     echo -e "${GREEN}✅ Containers are running${NC}"
     $COMPOSE_CMD ps
 else
@@ -145,8 +144,8 @@ fi
 
 # Step 8: Next Steps
 echo -e "\n${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-printf "${BLUE}║                     NEXT STEPS                            ║${NC}\n"
-printf "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}\n\n"
+printf '%b\n' "${BLUE}║                     NEXT STEPS                            ║${NC}"
+printf '%b\n\n' "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 
 echo -e "${GREEN}1. Access Nextcloud${NC}"
 DOMAIN=$(grep NEXTCLOUD_DOMAIN .env | cut -d= -f2 | tr -d ' ')

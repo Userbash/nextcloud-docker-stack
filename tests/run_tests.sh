@@ -21,30 +21,36 @@ NC='\033[0m'
 
 # ============ UTILITIES ============
 
+# Prints a framed title block to visually separate major phases.
 print_header() {
     echo -e "\n${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║ $1$(printf '%*s' $((56 - ${#1})) | tr ' ' ' ')║${NC}"
+    echo -e "${CYAN}║ $1$(printf '%*s' "$((56 - ${#1}))" "" | tr ' ' ' ')║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}\n"
 }
 
+# Prints a section label for the current operation.
 print_section() {
     echo -e "${BLUE}▶ $1${NC}"
 }
 
+# Prints a success message in green.
 print_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
+# Prints an error message in red.
 print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+# Prints an informational message in yellow.
 print_info() {
     echo -e "${YELLOW}ℹ️  $1${NC}"
 }
 
 # ============ ENVIRONMENT CHECKS ============
 
+# Verifies that Python 3 is available.
 check_python() {
     if ! command -v python3 &> /dev/null; then
         print_error "Python 3 not found. Install it to use Python tests."
@@ -54,6 +60,7 @@ check_python() {
     return 0
 }
 
+# Verifies that the current Bash version is supported.
 check_bash() {
     if ! [ "${BASH_VERSINFO[0]}" -ge 4 ]; then
         print_error "Bash 4+ required (current: ${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]})"
@@ -63,6 +70,7 @@ check_bash() {
     return 0
 }
 
+# Collects optional container tools and reports missing ones.
 check_required_tools() {
     local missing_tools=()
 
@@ -81,6 +89,7 @@ check_required_tools() {
 
 # ============ TEST EXECUTION ============
 
+# Runs shell-based local environment checks.
 run_bash_tests() {
     print_section "Running Local Environment Tests"
 
@@ -99,11 +108,13 @@ run_bash_tests() {
     return 0
 }
 
+# Placeholder for Python framework tests.
 run_python_tests() {
     print_info "Python framework tests skipped."
     return 0
 }
 
+# Runs log analyzer and saves text + JSON reports.
 run_log_analysis() {
     print_section "Analyzing Container Logs"
 
@@ -118,8 +129,10 @@ run_log_analysis() {
     fi
 
     local hours="${1:-1}"
-    local output_file="${REPORTS_DIR}/log_analysis_$(date +%Y%m%d_%H%M%S).txt"
-    local json_output="${REPORTS_DIR}/log_analysis_$(date +%Y%m%d_%H%M%S).json"
+    local output_file
+    local json_output
+    output_file="${REPORTS_DIR}/log_analysis_$(date +%Y%m%d_%H%M%S).txt"
+    json_output="${REPORTS_DIR}/log_analysis_$(date +%Y%m%d_%H%M%S).json"
 
     mkdir -p "$REPORTS_DIR"
 
@@ -139,6 +152,7 @@ run_log_analysis() {
 
 # ============ REPORT SUMMARY ============
 
+# Prints a compact summary of generated reports.
 show_report_summary() {
     print_section "Test Reports Summary"
 
@@ -147,7 +161,8 @@ show_report_summary() {
         return
     fi
 
-    local report_count=$(find "$REPORTS_DIR" -type f | wc -l)
+    local report_count
+    report_count=$(find "$REPORTS_DIR" -type f | wc -l)
 
     if [ "$report_count" -eq 0 ]; then
         print_info "No reports available"
@@ -155,13 +170,18 @@ show_report_summary() {
     fi
 
     echo -e "  Found $report_count report(s):"
-    ls -lh "$REPORTS_DIR" | grep -v '^total' | awk '{print "    " $9 " (" $5 ")"}'
+    find "$REPORTS_DIR" -maxdepth 1 -type f -printf '    %f (%s bytes)\n'
 
-    print_info "View latest report: cat $(ls -t "$REPORTS_DIR"/* 2>/dev/null | head -1)"
+    local latest_report
+    latest_report=$(find "$REPORTS_DIR" -maxdepth 1 -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
+    if [ -n "$latest_report" ]; then
+        print_info "View latest report: cat $latest_report"
+    fi
 }
 
 # ============ QUICK HEALTH CHECK ============
 
+# Shows container runtime status table for a selected engine.
 quick_health_check() {
     print_section "Quick Health Check"
 
@@ -186,6 +206,7 @@ quick_health_check() {
 
 # ============ MAIN MENU ============
 
+# Prints CLI help and usage examples.
 show_menu() {
     cat << EOF
 
@@ -212,8 +233,6 @@ ${GREEN}Examples:${NC}
 ${GREEN}Configuration:${NC}
   Project Root:    $PROJECT_ROOT
   Reports Dir:     $REPORTS_DIR
-  Python Framework: $PYTHON_FRAMEWORK
-  Bash Framework:  $BASH_FRAMEWORK
   Log Analyzer:    $LOG_ANALYZER
 
 EOF
@@ -221,6 +240,7 @@ EOF
 
 # ============ MAIN EXECUTION ============
 
+# Entry point. Routes subcommands and orchestrates checks.
 main() {
     local command="${1:-all}"
     local option="${2:-1}"
@@ -249,7 +269,7 @@ main() {
             run_log_analysis "$option"
             ;;
         health)
-            quick_health_check
+            quick_health_check "$option"
             ;;
         help|--help|-h)
             show_menu

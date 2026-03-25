@@ -32,6 +32,7 @@ if [ ! -f "$project_dir/.env" ]; then
 fi
 
 set -a
+# shellcheck source=/dev/null
 source "$project_dir/.env"
 set +a
 
@@ -62,10 +63,7 @@ BACKUP_ARCHIVE="$BACKUP_DIR/data_${TIMESTAMP}.tar.gz"
 # Method 1: Using volumes directly (modern approach)
 if $CONTAINER_CMD volume inspect nextcloud_html &>/dev/null && \
    $CONTAINER_CMD volume inspect nextcloud_data &>/dev/null; then
-    
-    # Create temporary backup container
-    BACKUP_CONTAINER="${CONTAINER_CMD}_backup_${TIMESTAMP}"
-    
+
     if $CONTAINER_CMD run --rm \
         --volume nextcloud_html:/backup/html:ro \
         --volume nextcloud_data:/backup/data:ro \
@@ -106,20 +104,21 @@ echo ""
 echo "✅ Backup complete!"
 echo ""
 echo "📋 Backup directory contents:"
-ls -lh "$BACKUP_DIR" | tail -n 6
+find "$BACKUP_DIR" -maxdepth 1 -type f -printf '%f (%s bytes)\n' | tail -n 6
 
 echo ""
 echo "🔐 Integrity check (if checksums exist):"
 cd "$BACKUP_DIR"
-for checksum_file in $(ls *.sha256 2>/dev/null); do
-    if [ -f "$checksum_file" ]; then
-        if sha256sum -c "$checksum_file" &>/dev/null; then
-            echo "  ✅ $checksum_file: OK"
-        else
-            echo "  ❌ $checksum_file: FAILED"
-        fi
+shopt -s nullglob
+for checksum_file in ./*.sha256; do
+    checksum_file="${checksum_file#./}"
+    if sha256sum -c "$checksum_file" &>/dev/null; then
+        echo "  ✅ $checksum_file: OK"
+    else
+        echo "  ❌ $checksum_file: FAILED"
     fi
 done
+shopt -u nullglob
 
 echo ""
 echo "💾 Backup disk usage:"

@@ -90,7 +90,8 @@ echo ""
 echo -e "${BLUE}🔌 Step 4: Checking Podman socket...${NC}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
-    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    export XDG_RUNTIME_DIR
 fi
 
 PODMAN_SOCKET="$XDG_RUNTIME_DIR/podman/podman.sock"
@@ -211,9 +212,11 @@ ENV_FILE="$project_dir/.env"
 if [ -f "$ENV_FILE" ]; then
     # Add Podman-specific settings if not present
     if ! grep -q "PODMAN_USERNS_MODE" "$ENV_FILE"; then
-        echo "" >> "$ENV_FILE"
-        echo "# Podman settings" >> "$ENV_FILE"
-        echo "PODMAN_USERNS_MODE=auto" >> "$ENV_FILE"
+        {
+            echo ""
+            echo "# Podman settings"
+            echo "PODMAN_USERNS_MODE=auto"
+        } >> "$ENV_FILE"
         echo -e "${GREEN}✅ Added Podman settings to .env${NC}"
     else
         echo -e "${GREEN}✅ .env already prepared for Podman${NC}"
