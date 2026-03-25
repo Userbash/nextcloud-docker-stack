@@ -1,10 +1,14 @@
+---
 name: Local Checks & Lints
 
-on:
+'on':
   push:
     branches: [ "main", "master", "dev" ]
   pull_request:
     branches: [ "main", "master" ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   lint:
@@ -28,7 +32,7 @@ jobs:
           sudo apt-get install -y yamllint
           WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
           cd "$WORKSPACE_DIR"
-          find . -type d -name '.git' -prune -o -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 2>/dev/null | xargs -0 -r yamllint || echo "Yamllint found issues, but continuing..."
+          bash scripts/validate-yaml.sh
 
       - name: Set up Python
         uses: actions/setup-python@v5

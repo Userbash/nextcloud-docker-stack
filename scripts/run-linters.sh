@@ -1,42 +1,64 @@
-#!/bin/bash
-# Script for running local linters before committing
-# Saves time by checking code locally before pushing to remote CI.
+#!/usr/bin/env bash
+# Run local quality checks before commit/push.
 
-set -e
+set -euo pipefail
 
-echo "=== Running local code checks ==="
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
 
-# 1. Shell scripts check
-if command -v shellcheck &> /dev/null; then
+# Prints a warning and continues when an optional tool is missing.
+warn_missing_tool() {
+    local tool_name="$1"
+    echo "[!] ${tool_name} is not installed. Skipping."
+}
+
+# Runs ShellCheck for repository shell scripts.
+run_shellcheck() {
     echo "[1/4] Running shellcheck..."
-    find . -name "*.sh" -not -path "./data/*" -not -path "./.git/*" -print0 | xargs -0 shellcheck
-else
-    echo "[!] shellcheck is not installed. Skipping."
-fi
+    if command -v shellcheck >/dev/null 2>&1; then
+        find . -name "*.sh" -not -path "./data/*" -not -path "./.git/*" -print0 | xargs -0 shellcheck
+    else
+        warn_missing_tool "shellcheck"
+    fi
+}
 
-# 2. YAML check
-if command -v yamllint &> /dev/null; then
-    echo "[2/4] Running yamllint..."
-    yamllint docker-compose*.yaml .github/workflows/
-else
-    echo "[!] yamllint is not installed. Skipping."
-fi
+# Runs strict YAML validation (required).
+run_yaml_checks() {
+    echo "[2/4] Running YAML validation..."
+    bash scripts/validate-yaml.sh
+}
 
-# 3. Python code check (flake8)
-if command -v flake8 &> /dev/null; then
+# Runs Python linting when flake8 is available.
+run_flake8() {
     echo "[3/4] Running flake8..."
-    flake8 .
-else
-    echo "[!] flake8 is not installed. Skipping."
-fi
+    if command -v flake8 >/dev/null 2>&1; then
+        flake8 .
+    else
+        warn_missing_tool "flake8"
+    fi
+}
 
-# 4. Python code formatting check (black)
-if command -v black &> /dev/null; then
+# Runs Python formatting checks when black is available.
+run_black() {
     echo "[4/4] Running black..."
-    black --check .
-else
-    echo "[!] black is not installed. Skipping."
-fi
+    if command -v black >/dev/null 2>&1; then
+        black --check .
+    else
+        warn_missing_tool "black"
+    fi
+}
 
-echo "=== All local checks passed successfully! ==="
-echo "To run a full GitHub Actions simulation, use the wrapper: bash scripts/run-ci-local.sh"
+# Entry point for local checks.
+main() {
+    echo "=== Running local code checks ==="
+
+    run_shellcheck
+    run_yaml_checks
+    run_flake8
+    run_black
+
+    echo "=== All local checks passed successfully! ==="
+    echo "To run full GitHub Actions locally: bash scripts/run-ci-local.sh"
+}
+
+main "$@"

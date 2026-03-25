@@ -140,7 +140,7 @@
       copy:
         src: "{{ project_root }}/{{ compose_file }}"
         dest: "{{ project_root }}/docker-compose.yml"
-        remote_src: yes
+        remote_src: true
 
     # ========================================================================
     # CONTAINER DEPLOYMENT
@@ -235,7 +235,7 @@
   handlers:
     - name: Reload systemd daemon
       systemd:
-        daemon_reload: yes
+        daemon_reload: true
 
   post_tasks:
     - name: Deployment summary

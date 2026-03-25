@@ -145,8 +145,8 @@ metadata:
   namespace: nextcloud
 spec:
   ports:
-  - port: 5432
-    targetPort: 5432
+    - port: 5432
+      targetPort: 5432
   selector:
     app: postgres
 
@@ -238,42 +238,42 @@ spec:
         app: nextcloud
     spec:
       containers:
-      - name: nextcloud
-        image: nextcloud:latest
-        imagePullPolicy: Always
-        envFrom:
-        - configMapRef:
-            name: nextcloud-config
-        - secretRef:
-            name: nextcloud-secrets
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: nextcloud-data
-          mountPath: /var/www/html
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /status.php
-            port: 80
-          initialDelaySeconds: 60
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /status.php
-            port: 80
-          initialDelaySeconds: 30
-          periodSeconds: 5
+        - name: nextcloud
+          image: nextcloud:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: nextcloud-config
+            - secretRef:
+                name: nextcloud-secrets
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /var/www/html
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /status.php
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /status.php
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 5
       volumes:
-      - name: nextcloud-data
-        persistentVolumeClaim:
-          claimName: nextcloud-data
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-data
 
 ---
 apiVersion: v1
@@ -286,9 +286,9 @@ spec:
   selector:
     app: nextcloud
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 80
+    - protocol: TCP
+      port: 80
+      targetPort: 80
 
 ---
 apiVersion: autoscaling/v2
@@ -304,18 +304,18 @@ spec:
   minReplicas: 2
   maxReplicas: 5
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -328,38 +328,38 @@ spec:
     matchLabels:
       app: nextcloud
   policyTypes:
-  - Ingress
-  - Egress
+    - Ingress
+    - Egress
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: ingress-nginx
-    ports:
-    - protocol: TCP
-      port: 80
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
   egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          app: postgres
-    ports:
-    - protocol: TCP
-      port: 5432
-  - to:
-    - podSelector:
-        matchLabels:
-          app: redis
-    ports:
-    - protocol: TCP
-      port: 6379
-  - to:
-    - namespaceSelector: {}
-    ports:
-    - protocol: TCP
-      port: 53
-    - protocol: UDP
-      port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
 
 ---
 apiVersion: policy/v1

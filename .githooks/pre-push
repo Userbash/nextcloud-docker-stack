@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Block push when YAML validation fails.
+
+set -euo pipefail
+
+# Resolves and enters repository root.
+set_project_root() {
+	local root_dir
+	root_dir="$(git rev-parse --show-toplevel)"
+	cd "$root_dir"
+}
+
+# Runs required YAML gate before allowing push.
+run_yaml_gate() {
+	echo "[pre-push] Checking YAML files..."
+	bash scripts/validate-yaml.sh
+	echo "[pre-push] YAML checks passed."
+}
+
+# Entry point for pre-push validation.
+main() {
+	set_project_root
+	run_yaml_gate
+}
+
+main "$@"
